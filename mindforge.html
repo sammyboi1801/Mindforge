@@ -1,0 +1,3140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MINDFORGE — Multi-Agent Intelligence System</title>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323:wght@400&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg-void: #050508;
+  --bg-deep: #0a0a12;
+  --bg-card: #0f0f1a;
+  --bg-panel: #13131f;
+  --bg-hover: #1a1a2e;
+  --border: #1e1e3a;
+  --border-bright: #2a2a50;
+  --pixel-green: #00ff88;
+  --pixel-cyan: #00e5ff;
+  --pixel-orange: #ff6b35;
+  --pixel-pink: #ff2d78;
+  --pixel-yellow: #ffd700;
+  --pixel-purple: #b44fff;
+  --pixel-red: #ff3355;
+  --pixel-blue: #4488ff;
+  --text-primary: #e8e8f0;
+  --text-dim: #6666aa;
+  --text-muted: #333355;
+  --scanline: rgba(0,255,136,0.03);
+
+  /* Agent colors */
+  --agent-0: #00ff88;
+  --agent-1: #00e5ff;
+  --agent-2: #ff6b35;
+  --agent-3: #ff2d78;
+  --agent-4: #ffd700;
+  --agent-5: #b44fff;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  background: var(--bg-void);
+  color: var(--text-primary);
+  font-family: 'Share Tech Mono', monospace;
+  min-height: 100vh;
+  overflow-x: hidden;
+  cursor: default;
+}
+
+/* SCANLINE OVERLAY */
+body::before {
+  content: '';
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    var(--scanline) 2px,
+    var(--scanline) 4px
+  );
+  pointer-events: none;
+  z-index: 9999;
+}
+
+/* PIXEL GRID BACKGROUND */
+body::after {
+  content: '';
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background-image:
+    linear-gradient(rgba(0,255,136,0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,255,136,0.03) 1px, transparent 1px);
+  background-size: 32px 32px;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ===== HEADER ===== */
+.header {
+  position: relative;
+  z-index: 10;
+  padding: 20px 24px;
+  border-bottom: 2px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--bg-deep);
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.logo-icon {
+  width: 40px;
+  height: 40px;
+  image-rendering: pixelated;
+  position: relative;
+}
+
+.logo-icon canvas {
+  width: 40px;
+  height: 40px;
+  image-rendering: pixelated;
+}
+
+.logo-text {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 14px;
+  color: var(--pixel-green);
+  text-shadow: 0 0 20px var(--pixel-green), 0 0 40px rgba(0,255,136,0.3);
+  letter-spacing: 2px;
+}
+
+.logo-sub {
+  font-size: 9px;
+  color: var(--text-dim);
+  letter-spacing: 3px;
+  margin-top: 4px;
+  font-family: 'VT323', monospace;
+  font-size: 14px;
+}
+
+.header-status {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.status-pill {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  font-size: 10px;
+  color: var(--text-dim);
+  font-family: 'VT323', monospace;
+  font-size: 16px;
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  background: var(--pixel-green);
+  animation: blink 1.5s infinite;
+  image-rendering: pixelated;
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.2; }
+}
+
+.nav-tabs {
+  display: flex;
+  gap: 4px;
+}
+
+.nav-tab {
+  padding: 8px 14px;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 8px;
+  border: 2px solid var(--border);
+  background: transparent;
+  color: var(--text-dim);
+  cursor: pointer;
+  transition: all 0.1s;
+  letter-spacing: 1px;
+}
+
+.nav-tab:hover, .nav-tab.active {
+  background: var(--pixel-green);
+  color: var(--bg-void);
+  border-color: var(--pixel-green);
+  box-shadow: 0 0 16px rgba(0,255,136,0.4);
+}
+
+/* ===== MAIN LAYOUT ===== */
+.app {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: 280px 1fr 300px;
+  grid-template-rows: auto 1fr auto;
+  min-height: calc(100vh - 80px);
+  gap: 0;
+}
+
+.panel-left {
+  grid-row: 1 / 3;
+  border-right: 2px solid var(--border);
+  background: var(--bg-deep);
+  overflow-y: auto;
+  max-height: calc(100vh - 80px);
+}
+
+.panel-center {
+  grid-column: 2;
+  grid-row: 1 / 3;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-void);
+  height: calc(100vh - 83px);
+  overflow: hidden;
+}
+
+.panel-right {
+  grid-row: 1 / 3;
+  border-left: 2px solid var(--border);
+  background: var(--bg-deep);
+  overflow-y: auto;
+  max-height: calc(100vh - 80px);
+}
+
+/* ===== SECTION HEADERS ===== */
+.section-head {
+  padding: 14px 16px;
+  border-bottom: 2px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--bg-panel);
+  position: sticky;
+  top: 0;
+  z-index: 5;
+}
+
+.section-title {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 8px;
+  color: var(--pixel-cyan);
+  letter-spacing: 1px;
+}
+
+.section-badge {
+  margin-left: auto;
+  padding: 3px 8px;
+  background: var(--border);
+  font-size: 10px;
+  color: var(--text-dim);
+  font-family: 'VT323', monospace;
+  font-size: 14px;
+}
+
+/* ===== PRESET CARDS ===== */
+.presets-list {
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.preset-card {
+  padding: 12px;
+  border: 2px solid var(--border);
+  background: var(--bg-card);
+  cursor: pointer;
+  transition: all 0.1s;
+  position: relative;
+  overflow: hidden;
+}
+
+.preset-card::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 3px;
+  background: var(--accent-color, var(--pixel-green));
+}
+
+.preset-card:hover {
+  border-color: var(--accent-color, var(--pixel-green));
+  background: var(--bg-hover);
+  transform: translateX(2px);
+}
+
+.preset-card.selected {
+  border-color: var(--accent-color, var(--pixel-green));
+  background: var(--bg-hover);
+  box-shadow: inset 0 0 20px rgba(0,255,136,0.05);
+}
+
+.preset-card.selected::after {
+  content: '▶';
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--accent-color, var(--pixel-green));
+  font-size: 12px;
+  animation: pulse-right 0.8s infinite;
+}
+
+@keyframes pulse-right {
+  0%, 100% { transform: translateY(-50%) translateX(0); }
+  50% { transform: translateY(-50%) translateX(3px); }
+}
+
+.preset-name {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 8px;
+  color: var(--text-primary);
+  margin-bottom: 6px;
+}
+
+.preset-desc {
+  font-size: 11px;
+  color: var(--text-dim);
+  line-height: 1.5;
+  font-family: 'VT323', monospace;
+  font-size: 14px;
+}
+
+.preset-meta {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+  flex-wrap: wrap;
+}
+
+.preset-tag {
+  padding: 2px 6px;
+  font-size: 9px;
+  font-family: 'Press Start 2P', monospace;
+  border: 1px solid;
+  font-size: 7px;
+}
+
+/* ===== ARCHITECTURE SECTION ===== */
+.arch-list {
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.arch-btn {
+  padding: 10px 12px;
+  border: 2px solid var(--border);
+  background: var(--bg-card);
+  cursor: pointer;
+  color: var(--text-dim);
+  font-family: 'VT323', monospace;
+  font-size: 16px;
+  text-align: left;
+  transition: all 0.1s;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.arch-btn:hover, .arch-btn.active {
+  border-color: var(--pixel-orange);
+  color: var(--pixel-orange);
+  background: rgba(255,107,53,0.08);
+}
+
+.arch-icon { font-size: 18px; }
+
+/* ===== PROVIDER CONFIG ===== */
+.provider-section {
+  padding: 12px;
+}
+
+.provider-tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 4px;
+  margin-bottom: 12px;
+}
+
+.provider-tab {
+  padding: 8px 4px;
+  border: 2px solid var(--border);
+  background: var(--bg-card);
+  cursor: pointer;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 7px;
+  color: var(--text-dim);
+  text-align: center;
+  transition: all 0.1s;
+}
+
+.provider-tab:hover, .provider-tab.active {
+  border-color: var(--pixel-yellow);
+  color: var(--pixel-yellow);
+  background: rgba(255,215,0,0.08);
+}
+
+.config-field {
+  margin-bottom: 10px;
+}
+
+.config-label {
+  display: block;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 7px;
+  color: var(--text-dim);
+  margin-bottom: 6px;
+  letter-spacing: 1px;
+}
+
+.config-input {
+  width: 100%;
+  padding: 8px 10px;
+  background: var(--bg-void);
+  border: 2px solid var(--border);
+  color: var(--pixel-green);
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 12px;
+  outline: none;
+  transition: border-color 0.1s;
+}
+
+.config-input:focus {
+  border-color: var(--pixel-green);
+  box-shadow: 0 0 8px rgba(0,255,136,0.2);
+}
+
+.config-input::placeholder { color: var(--text-muted); }
+
+.config-select {
+  width: 100%;
+  padding: 8px 10px;
+  background: var(--bg-void);
+  border: 2px solid var(--border);
+  color: var(--pixel-cyan);
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 12px;
+  outline: none;
+  cursor: pointer;
+  appearance: none;
+}
+
+/* ===== AGENT CONFIG ===== */
+.agents-config {
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.agent-config-card {
+  padding: 10px;
+  border: 2px solid var(--border);
+  background: var(--bg-card);
+  position: relative;
+}
+
+.agent-config-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.agent-color-dot {
+  width: 12px;
+  height: 12px;
+  image-rendering: pixelated;
+  flex-shrink: 0;
+}
+
+.agent-config-name {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 7px;
+  flex: 1;
+}
+
+.agent-role-select {
+  width: 100%;
+  padding: 5px 8px;
+  background: var(--bg-void);
+  border: 1px solid var(--border);
+  color: var(--text-primary);
+  font-family: 'VT323', monospace;
+  font-size: 14px;
+  outline: none;
+  margin-bottom: 6px;
+}
+
+.agent-slider-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.agent-slider-label {
+  font-size: 10px;
+  color: var(--text-dim);
+  width: 70px;
+  font-family: 'VT323', monospace;
+  font-size: 13px;
+}
+
+.agent-slider {
+  flex: 1;
+  appearance: none;
+  height: 4px;
+  background: var(--border);
+  outline: none;
+  cursor: pointer;
+}
+
+.agent-slider::-webkit-slider-thumb {
+  appearance: none;
+  width: 12px;
+  height: 12px;
+  background: var(--pixel-cyan);
+  cursor: pointer;
+  image-rendering: pixelated;
+}
+
+.add-agent-btn {
+  padding: 10px;
+  border: 2px dashed var(--border);
+  background: transparent;
+  color: var(--text-dim);
+  font-family: 'Press Start 2P', monospace;
+  font-size: 8px;
+  cursor: pointer;
+  width: 100%;
+  transition: all 0.1s;
+  letter-spacing: 1px;
+}
+
+.add-agent-btn:hover {
+  border-color: var(--pixel-green);
+  color: var(--pixel-green);
+}
+
+/* ===== CENTER PANEL ===== */
+.arena-header {
+  padding: 16px 20px;
+  border-bottom: 2px solid var(--border);
+  background: var(--bg-panel);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.arena-title {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 10px;
+  color: var(--text-primary);
+}
+
+.arena-arch-badge {
+  padding: 4px 10px;
+  font-family: 'VT323', monospace;
+  font-size: 16px;
+  border: 1px solid var(--pixel-orange);
+  color: var(--pixel-orange);
+  background: rgba(255,107,53,0.1);
+}
+
+.round-indicator {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.round-badge {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 8px;
+  color: var(--pixel-yellow);
+}
+
+.round-dots {
+  display: flex;
+  gap: 4px;
+}
+
+.round-dot {
+  width: 8px;
+  height: 8px;
+  background: var(--border);
+  transition: background 0.3s;
+}
+
+.round-dot.active {
+  background: var(--pixel-yellow);
+  box-shadow: 0 0 8px var(--pixel-yellow);
+}
+
+.round-dot.done {
+  background: var(--pixel-green);
+}
+
+/* TASK INPUT */
+.task-input-area {
+  padding: 16px 20px;
+  border-bottom: 2px solid var(--border);
+  background: var(--bg-deep);
+}
+
+.task-input-label {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 8px;
+  color: var(--text-dim);
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.task-input-label span {
+  color: var(--pixel-green);
+  animation: blink 1s infinite;
+}
+
+.task-textarea {
+  width: 100%;
+  min-height: 70px;
+  padding: 12px;
+  background: var(--bg-void);
+  border: 2px solid var(--border);
+  color: var(--text-primary);
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 13px;
+  outline: none;
+  resize: vertical;
+  line-height: 1.6;
+  transition: border-color 0.2s;
+}
+
+.task-textarea:focus {
+  border-color: var(--pixel-green);
+  box-shadow: 0 0 16px rgba(0,255,136,0.1);
+}
+
+.task-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+  flex-wrap: wrap;
+}
+
+.btn-run {
+  padding: 12px 24px;
+  background: var(--pixel-green);
+  border: none;
+  color: var(--bg-void);
+  font-family: 'Press Start 2P', monospace;
+  font-size: 9px;
+  cursor: pointer;
+  letter-spacing: 1px;
+  transition: all 0.1s;
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-run::before {
+  content: '';
+  position: absolute;
+  top: 0; left: -100%;
+  width: 100%; height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+  transition: left 0.3s;
+}
+
+.btn-run:hover::before { left: 100%; }
+.btn-run:hover {
+  box-shadow: 0 0 24px rgba(0,255,136,0.6);
+  transform: translateY(-1px);
+}
+
+.btn-run:disabled {
+  background: var(--border);
+  color: var(--text-muted);
+  cursor: not-allowed;
+  box-shadow: none;
+  transform: none;
+}
+
+.btn-stop {
+  padding: 12px 20px;
+  background: transparent;
+  border: 2px solid var(--pixel-red);
+  color: var(--pixel-red);
+  font-family: 'Press Start 2P', monospace;
+  font-size: 9px;
+  cursor: pointer;
+  transition: all 0.1s;
+  display: none;
+}
+
+.btn-stop:hover {
+  background: var(--pixel-red);
+  color: var(--bg-void);
+}
+
+.btn-clear {
+  padding: 12px 20px;
+  background: transparent;
+  border: 2px solid var(--border);
+  color: var(--text-dim);
+  font-family: 'Press Start 2P', monospace;
+  font-size: 9px;
+  cursor: pointer;
+  transition: all 0.1s;
+}
+
+.btn-clear:hover {
+  border-color: var(--text-dim);
+  color: var(--text-primary);
+}
+
+/* ===== ARENA / CONVERSATION ===== */
+.arena-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 0;
+}
+
+.arena-empty {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  gap: 16px;
+  padding: 40px;
+}
+
+.arena-empty-icon {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 32px;
+  color: var(--border);
+  animation: float 3s ease-in-out infinite;
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+
+.arena-empty-text {
+  font-family: 'VT323', monospace;
+  font-size: 20px;
+  text-align: center;
+  line-height: 1.8;
+}
+
+/* PHASE BANNER */
+.phase-banner {
+  padding: 10px 16px;
+  background: var(--bg-panel);
+  border: 2px solid var(--pixel-yellow);
+  color: var(--pixel-yellow);
+  font-family: 'Press Start 2P', monospace;
+  font-size: 9px;
+  text-align: center;
+  letter-spacing: 2px;
+  animation: phase-pulse 1s ease-in-out infinite;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+
+@keyframes phase-pulse {
+  0%, 100% { box-shadow: 0 0 8px rgba(255,215,0,0.3); }
+  50% { box-shadow: 0 0 24px rgba(255,215,0,0.6); }
+}
+
+.phase-icon { font-size: 18px; animation: spin 2s linear infinite; }
+@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+/* MESSAGE BUBBLES */
+.msg-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  animation: msg-appear 0.3s ease-out;
+}
+
+@keyframes msg-appear {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.msg-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.msg-agent-dot {
+  width: 10px;
+  height: 10px;
+  image-rendering: pixelated;
+  flex-shrink: 0;
+}
+
+.msg-agent-name {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 8px;
+}
+
+.msg-role-tag {
+  padding: 2px 6px;
+  font-family: 'VT323', monospace;
+  font-size: 13px;
+  border: 1px solid currentColor;
+  opacity: 0.7;
+}
+
+.msg-time {
+  margin-left: auto;
+  font-size: 11px;
+  color: var(--text-muted);
+  font-family: 'VT323', monospace;
+}
+
+.msg-bubble {
+  padding: 12px 14px;
+  border: 2px solid;
+  background: var(--bg-card);
+  font-size: 13px;
+  line-height: 1.7;
+  font-family: 'Share Tech Mono', monospace;
+  margin-left: 18px;
+  position: relative;
+  word-break: break-word;
+}
+
+.msg-bubble::before {
+  content: '';
+  position: absolute;
+  left: -8px;
+  top: 8px;
+  width: 6px;
+  height: 6px;
+  background: var(--bubble-color);
+}
+
+.typing-cursor {
+  display: inline-block;
+  width: 8px;
+  height: 14px;
+  background: currentColor;
+  animation: cursor-blink 0.7s infinite;
+  vertical-align: text-bottom;
+  margin-left: 2px;
+}
+
+@keyframes cursor-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+/* THINKING INDICATOR */
+.thinking-dots {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 14px;
+  margin-left: 18px;
+  font-family: 'VT323', monospace;
+  font-size: 16px;
+  color: var(--text-dim);
+}
+
+.thinking-dot {
+  width: 6px;
+  height: 6px;
+  background: currentColor;
+  animation: think-bounce 1.2s infinite;
+}
+
+.thinking-dot:nth-child(2) { animation-delay: 0.2s; }
+.thinking-dot:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes think-bounce {
+  0%, 100% { transform: translateY(0); opacity: 0.4; }
+  50% { transform: translateY(-6px); opacity: 1; }
+}
+
+/* ===== VOTING SECTION ===== */
+.vote-panel {
+  padding: 16px;
+  border: 2px solid var(--pixel-purple);
+  background: rgba(180,79,255,0.05);
+  margin: 8px 0;
+  animation: msg-appear 0.3s ease-out;
+}
+
+.vote-title {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 9px;
+  color: var(--pixel-purple);
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.vote-options {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.vote-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.vote-label {
+  font-family: 'VT323', monospace;
+  font-size: 16px;
+  color: var(--text-dim);
+  width: 80px;
+  flex-shrink: 0;
+}
+
+.vote-bar-wrap {
+  flex: 1;
+  height: 18px;
+  background: var(--border);
+  position: relative;
+  overflow: hidden;
+}
+
+.vote-bar-fill {
+  height: 100%;
+  background: var(--pixel-purple);
+  transition: width 0.8s cubic-bezier(0.4,0,0.2,1);
+  position: relative;
+}
+
+.vote-bar-fill::after {
+  content: '';
+  position: absolute;
+  right: 0; top: 0; bottom: 0;
+  width: 2px;
+  background: white;
+  box-shadow: 0 0 8px white;
+}
+
+.vote-count {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 8px;
+  color: var(--pixel-purple);
+  width: 30px;
+  text-align: right;
+}
+
+.vote-winner {
+  margin-top: 12px;
+  padding: 8px 12px;
+  background: rgba(180,79,255,0.15);
+  border: 1px solid var(--pixel-purple);
+  font-family: 'Press Start 2P', monospace;
+  font-size: 8px;
+  color: var(--pixel-purple);
+  text-align: center;
+  animation: winner-glow 1s ease-in-out infinite;
+}
+
+@keyframes winner-glow {
+  0%, 100% { box-shadow: 0 0 8px rgba(180,79,255,0.3); }
+  50% { box-shadow: 0 0 20px rgba(180,79,255,0.7); }
+}
+
+/* ===== SYNTHESIS PANEL ===== */
+.synthesis-card {
+  padding: 16px;
+  border: 2px solid var(--pixel-green);
+  background: rgba(0,255,136,0.04);
+  animation: msg-appear 0.3s ease-out;
+}
+
+.synthesis-title {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 9px;
+  color: var(--pixel-green);
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.synthesis-title::after {
+  content: '●●●';
+  color: var(--pixel-green);
+  animation: blink 0.5s infinite;
+  font-size: 12px;
+}
+
+.synthesis-title.done::after {
+  content: '✓ COMPLETE';
+  animation: none;
+  font-size: 9px;
+}
+
+.synthesis-content {
+  font-size: 13px;
+  line-height: 1.8;
+  color: var(--text-primary);
+  font-family: 'Share Tech Mono', monospace;
+}
+
+/* CONTRIBUTION BARS */
+.contrib-section {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+
+.contrib-title {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 7px;
+  color: var(--text-dim);
+  margin-bottom: 8px;
+  letter-spacing: 1px;
+}
+
+.contrib-bar-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.contrib-name {
+  font-family: 'VT323', monospace;
+  font-size: 14px;
+  width: 80px;
+  flex-shrink: 0;
+}
+
+.contrib-bar {
+  flex: 1;
+  height: 8px;
+  background: var(--border);
+}
+
+.contrib-fill {
+  height: 100%;
+  transition: width 1s ease-out;
+}
+
+.contrib-pct {
+  font-family: 'VT323', monospace;
+  font-size: 14px;
+  width: 36px;
+  text-align: right;
+}
+
+/* ===== RIGHT PANEL ===== */
+.agent-status-list {
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.agent-status-card {
+  padding: 10px;
+  border: 2px solid var(--border);
+  background: var(--bg-card);
+  transition: all 0.3s;
+}
+
+.agent-status-card.thinking {
+  border-color: var(--agent-color);
+  box-shadow: 0 0 12px rgba(var(--agent-color-rgb), 0.3);
+  animation: card-pulse 1s ease-in-out infinite;
+}
+
+@keyframes card-pulse {
+  0%, 100% { box-shadow: 0 0 8px rgba(0,229,255,0.2); }
+  50% { box-shadow: 0 0 20px rgba(0,229,255,0.5); }
+}
+
+.agent-status-card.done { border-color: var(--pixel-green); }
+
+.agent-status-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.agent-status-avatar {
+  width: 28px;
+  height: 28px;
+  image-rendering: pixelated;
+}
+
+.agent-status-info { flex: 1; }
+
+.agent-status-name {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 7px;
+  margin-bottom: 3px;
+}
+
+.agent-status-role {
+  font-family: 'VT323', monospace;
+  font-size: 14px;
+  color: var(--text-dim);
+}
+
+.agent-status-state {
+  font-family: 'VT323', monospace;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.agent-confidence-bar {
+  height: 4px;
+  background: var(--border);
+  margin-top: 6px;
+}
+
+.agent-confidence-fill {
+  height: 100%;
+  background: var(--agent-color, var(--pixel-cyan));
+  transition: width 0.5s ease-out;
+}
+
+/* STATS PANEL */
+.stats-section {
+  padding: 12px;
+}
+
+.stat-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.stat-label {
+  font-family: 'VT323', monospace;
+  font-size: 16px;
+  color: var(--text-dim);
+}
+
+.stat-value {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 8px;
+  color: var(--pixel-cyan);
+}
+
+/* HISTORY */
+.history-list {
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.history-item {
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  cursor: pointer;
+  transition: all 0.1s;
+  font-size: 11px;
+  color: var(--text-dim);
+  font-family: 'VT323', monospace;
+  font-size: 14px;
+}
+
+.history-item:hover {
+  border-color: var(--pixel-cyan);
+  color: var(--pixel-cyan);
+}
+
+.history-task {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-bottom: 3px;
+}
+
+.history-meta {
+  display: flex;
+  gap: 8px;
+  font-size: 11px;
+  opacity: 0.6;
+}
+
+/* ===== PIXEL ART ELEMENTS ===== */
+.pixel-border {
+  box-shadow:
+    2px 0 0 0 var(--border),
+    -2px 0 0 0 var(--border),
+    0 2px 0 0 var(--border),
+    0 -2px 0 0 var(--border);
+}
+
+/* ===== SCROLLBAR ===== */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: var(--bg-void); }
+::-webkit-scrollbar-thumb { background: var(--border-bright); }
+::-webkit-scrollbar-thumb:hover { background: var(--pixel-green); }
+
+/* ===== NOTIFICATION TOAST ===== */
+.toast {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  padding: 12px 16px;
+  background: var(--bg-panel);
+  border: 2px solid var(--pixel-green);
+  font-family: 'Press Start 2P', monospace;
+  font-size: 8px;
+  color: var(--pixel-green);
+  z-index: 1000;
+  animation: toast-in 0.3s ease-out;
+  max-width: 280px;
+  box-shadow: 0 0 24px rgba(0,255,136,0.3);
+}
+
+@keyframes toast-in {
+  from { transform: translateX(120%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+/* PROGRESS BAR AT TOP */
+.progress-bar {
+  height: 3px;
+  background: var(--border);
+  position: relative;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--pixel-green), var(--pixel-cyan));
+  transition: width 0.3s ease-out;
+  position: relative;
+}
+
+.progress-fill::after {
+  content: '';
+  position: absolute;
+  right: 0; top: 0; bottom: 0;
+  width: 40px;
+  background: linear-gradient(90deg, transparent, white);
+  animation: shimmer 0.8s infinite;
+}
+
+@keyframes shimmer { 
+  from { opacity: 0.3; }
+  to { opacity: 0; }
+}
+
+/* ===== MOBILE RESPONSIVE ===== */
+@media (max-width: 900px) {
+  .app {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto;
+  }
+
+  .panel-left {
+    grid-row: auto;
+    grid-column: 1;
+    max-height: none;
+    border-right: none;
+    border-bottom: 2px solid var(--border);
+  }
+
+  .panel-center {
+    grid-column: 1;
+    grid-row: auto;
+  }
+
+  .panel-right {
+    grid-column: 1;
+    grid-row: auto;
+    max-height: none;
+    border-left: none;
+    border-top: 2px solid var(--border);
+  }
+
+  .header {
+    padding: 12px 16px;
+  }
+
+  .logo-text { font-size: 10px; }
+  .nav-tabs { display: none; }
+}
+
+@media (max-width: 600px) {
+  .logo-text { font-size: 8px; }
+  .task-actions { gap: 6px; }
+  .btn-run, .btn-stop, .btn-clear { padding: 10px 14px; font-size: 7px; }
+}
+
+/* GLITCH TEXT EFFECT */
+.glitch {
+  position: relative;
+}
+
+.glitch::before, .glitch::after {
+  content: attr(data-text);
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.glitch::before {
+  color: var(--pixel-cyan);
+  animation: glitch-1 3s infinite;
+}
+
+.glitch::after {
+  color: var(--pixel-pink);
+  animation: glitch-2 3s infinite;
+}
+
+@keyframes glitch-1 {
+  0%, 90%, 100% { clip-path: none; transform: none; opacity: 0; }
+  91% { clip-path: inset(30% 0 50% 0); transform: translateX(-2px); opacity: 0.8; }
+  93% { clip-path: inset(60% 0 20% 0); transform: translateX(2px); opacity: 0.8; }
+}
+
+@keyframes glitch-2 {
+  0%, 88%, 100% { clip-path: none; transform: none; opacity: 0; }
+  89% { clip-path: inset(10% 0 70% 0); transform: translateX(2px); opacity: 0.8; }
+  91% { clip-path: inset(80% 0 5% 0); transform: translateX(-2px); opacity: 0.8; }
+}
+
+/* SECRET THOUGHTS PANEL */
+.secret-thoughts {
+  padding: 8px 14px;
+  margin-left: 18px;
+  border: 1px dashed var(--border);
+  background: rgba(0,0,0,0.4);
+  font-size: 11px;
+  color: var(--text-muted);
+  font-style: italic;
+  margin-top: 4px;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: 'Share Tech Mono', monospace;
+}
+
+.secret-thoughts:hover {
+  color: var(--text-dim);
+  border-color: var(--text-dim);
+}
+
+.secret-thoughts.revealed {
+  color: var(--pixel-yellow);
+  border-color: var(--pixel-yellow);
+  background: rgba(255,215,0,0.04);
+}
+
+/* INTERVENTION BUTTON */
+.intervention-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border-top: 1px solid var(--border);
+  background: var(--bg-panel);
+}
+
+.intervention-label {
+  font-family: 'VT323', monospace;
+  font-size: 14px;
+  color: var(--text-muted);
+}
+
+.intervention-select {
+  padding: 4px 8px;
+  background: var(--bg-void);
+  border: 1px solid var(--border);
+  color: var(--pixel-cyan);
+  font-family: 'VT323', monospace;
+  font-size: 14px;
+  outline: none;
+}
+
+.intervention-input {
+  flex: 1;
+  padding: 6px 10px;
+  background: var(--bg-void);
+  border: 1px solid var(--border);
+  color: var(--text-primary);
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 11px;
+  outline: none;
+}
+
+.intervention-send {
+  padding: 6px 10px;
+  background: transparent;
+  border: 1px solid var(--pixel-orange);
+  color: var(--pixel-orange);
+  font-family: 'VT323', monospace;
+  font-size: 16px;
+  cursor: pointer;
+  transition: all 0.1s;
+}
+
+.intervention-send:hover {
+  background: var(--pixel-orange);
+  color: var(--bg-void);
+}
+
+/* ===== PIXEL AVATAR ===== */
+.pixel-avatar {
+  image-rendering: pixelated;
+  display: block;
+}
+
+/* MODEL BADGE */
+.model-badge {
+  display: inline-block;
+  padding: 2px 6px;
+  background: rgba(0,229,255,0.1);
+  border: 1px solid var(--pixel-cyan);
+  color: var(--pixel-cyan);
+  font-family: 'VT323', monospace;
+  font-size: 13px;
+  margin-left: 6px;
+}
+
+/* TOGGLE BUTTONS */
+.toggle-btn {
+  padding: 5px 10px;
+  border: 2px solid var(--border);
+  background: var(--bg-card);
+  color: var(--text-muted);
+  font-family: 'Press Start 2P', monospace;
+  font-size: 7px;
+  cursor: pointer;
+  transition: all 0.15s;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+}
+
+.toggle-btn:hover {
+  border-color: var(--text-dim);
+  color: var(--text-dim);
+}
+
+.toggle-btn.active {
+  border-color: var(--pixel-green);
+  color: var(--pixel-green);
+  background: rgba(0,255,136,0.08);
+  box-shadow: 0 0 10px rgba(0,255,136,0.2);
+}
+
+.toggle-btn.voice-on {
+  border-color: var(--pixel-cyan);
+  color: var(--pixel-cyan);
+  background: rgba(0,229,255,0.08);
+  box-shadow: 0 0 10px rgba(0,229,255,0.2);
+  animation: voice-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes voice-pulse {
+  0%, 100% { box-shadow: 0 0 6px rgba(0,229,255,0.2); }
+  50% { box-shadow: 0 0 18px rgba(0,229,255,0.5); }
+}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header class="header">
+  <div class="logo">
+    <canvas id="logoCanvas" class="logo-icon" width="40" height="40"></canvas>
+    <div>
+      <div class="logo-text glitch" data-text="MINDFORGE">MINDFORGE</div>
+      <div class="logo-sub">MULTI-AGENT INTELLIGENCE v0.1</div>
+    </div>
+  </div>
+
+  <div class="header-status">
+    <div class="status-pill">
+      <div class="status-dot"></div>
+      SYSTEM ONLINE
+    </div>
+    <div class="status-pill" id="providerBadge">
+      PROVIDER: GROQ
+    </div>
+    <div class="status-pill" id="sessionCounter">
+      SESSIONS: 0
+    </div>
+  </div>
+
+  <div class="nav-tabs">
+    <button class="nav-tab active" onclick="switchView('studio')">STUDIO</button>
+    <button class="nav-tab" onclick="switchView('history')">HISTORY</button>
+    <button class="nav-tab" onclick="switchView('about')">ABOUT</button>
+  </div>
+</header>
+
+<!-- PROGRESS BAR -->
+<div class="progress-bar">
+  <div class="progress-fill" id="progressBar" style="width:0%"></div>
+</div>
+
+<!-- MAIN APP -->
+<div class="app" id="studioView">
+
+  <!-- LEFT PANEL -->
+  <aside class="panel-left">
+
+    <!-- PRESETS -->
+    <div class="section-head">
+      <div class="section-title">⚡ PRESETS</div>
+      <div class="section-badge">6 LOADED</div>
+    </div>
+    <div class="presets-list" id="presetsList"></div>
+
+    <!-- ARCHITECTURE -->
+    <div class="section-head" style="margin-top:2px;">
+      <div class="section-title">🏗 ARCHITECTURE</div>
+    </div>
+    <div class="arch-list" id="archList"></div>
+
+    <!-- PROVIDER CONFIG -->
+    <div class="section-head" style="margin-top:2px;">
+      <div class="section-title">🔌 PROVIDER</div>
+    </div>
+    <div class="provider-section">
+      <div class="provider-tabs">
+        <button class="provider-tab active" onclick="setProvider('groq')" id="tab-groq">GROQ</button>
+        <button class="provider-tab" onclick="setProvider('openrouter')" id="tab-openrouter">OPENRTR</button>
+        <button class="provider-tab" onclick="setProvider('ollama')" id="tab-ollama">OLLAMA</button>
+      </div>
+
+      <div id="groq-config">
+        <div class="config-field">
+          <label class="config-label">API KEY</label>
+          <input type="password" class="config-input" id="groqApiKey" placeholder="gsk_...">
+        </div>
+        <div class="config-field">
+          <label class="config-label">MODEL</label>
+          <select class="config-select" id="groqModel">
+            <option value="llama-3.1-8b-instant">Llama 3.1 8B Instant</option>
+            <option value="llama-3.1-70b-versatile">Llama 3.1 70B</option>
+            <option value="llama3-8b-8192">Llama3 8B</option>
+            <option value="gemma2-9b-it">Gemma2 9B</option>
+            <option value="mixtral-8x7b-32768">Mixtral 8x7B</option>
+          </select>
+        </div>
+      </div>
+
+      <div id="openrouter-config" style="display:none">
+        <div class="config-field">
+          <label class="config-label">API KEY</label>
+          <input type="password" class="config-input" id="orApiKey" placeholder="sk-or-...">
+        </div>
+        <div class="config-field">
+          <label class="config-label">MODEL</label>
+          <select class="config-select" id="orModel">
+            <option value="meta-llama/llama-3.1-8b-instruct:free">Llama 3.1 8B (Free)</option>
+            <option value="meta-llama/llama-3.1-70b-instruct">Llama 3.1 70B</option>
+            <option value="mistralai/mistral-7b-instruct:free">Mistral 7B (Free)</option>
+            <option value="anthropic/claude-3-haiku">Claude 3 Haiku</option>
+            <option value="openai/gpt-4o-mini">GPT-4o Mini</option>
+            <option value="google/gemma-2-9b-it:free">Gemma2 9B (Free)</option>
+          </select>
+        </div>
+      </div>
+
+      <div id="ollama-config" style="display:none">
+        <div class="config-field">
+          <label class="config-label">OLLAMA HOST</label>
+          <input type="text" class="config-input" id="ollamaHost" placeholder="http://localhost:11434">
+        </div>
+        <div class="config-field">
+          <label class="config-label">MODEL</label>
+          <input type="text" class="config-input" id="ollamaModel" placeholder="llama3.2:3b">
+        </div>
+        <div style="font-family:'VT323',monospace;font-size:13px;color:var(--text-muted);padding:4px 0;">
+          Run: ollama serve &amp;&amp; ollama pull llama3.2
+        </div>
+      </div>
+    </div>
+
+    <!-- AGENT CONFIG -->
+    <div class="section-head" style="margin-top:2px;">
+      <div class="section-title">🤖 AGENTS</div>
+      <div class="section-badge" id="agentCountBadge">3</div>
+    </div>
+    <div class="agents-config" id="agentsConfig"></div>
+
+  </aside>
+
+  <!-- CENTER PANEL -->
+  <main class="panel-center">
+
+    <div class="arena-header">
+      <div class="arena-title">THE ARENA</div>
+      <div class="arena-arch-badge" id="currentArchBadge">COUNCIL MODE</div>
+      <div class="round-indicator">
+        <span class="round-badge">ROUND</span>
+        <div class="round-dots" id="roundDots">
+          <div class="round-dot" id="dot-0"></div>
+          <div class="round-dot" id="dot-1"></div>
+          <div class="round-dot" id="dot-2"></div>
+        </div>
+      </div>
+      <div style="display:flex;gap:6px;margin-left:8px;">
+        <button class="toggle-btn active" id="typingToggle" onclick="toggleTyping()" title="Typing animation">
+          ⌨ TYPE
+        </button>
+        <button class="toggle-btn" id="voiceToggle" onclick="toggleVoice()" title="Voice readout (Web Speech API — free)">
+          🔇 VOICE
+        </button>
+      </div>
+    </div>
+
+    <!-- TASK INPUT -->
+    <div class="task-input-area">
+      <div class="task-input-label">
+        <span>▶</span> ENTER YOUR TASK OR QUESTION
+      </div>
+      <textarea class="task-textarea" id="taskInput" placeholder="Describe the task for your agents... e.g. 'Design a SaaS product for remote teams' or 'Write and critique a plan to learn machine learning in 3 months'"
+        onkeydown="if(event.ctrlKey && event.key==='Enter') runAgents()"></textarea>
+      <div class="task-actions">
+        <button class="btn-run" id="runBtn" onclick="runAgents()">▶ FORGE IT</button>
+        <button class="btn-stop" id="stopBtn" onclick="stopAgents()">■ STOP</button>
+        <button class="btn-clear" onclick="clearArena()">✕ CLEAR</button>
+        <div style="margin-left:auto;font-family:'VT323',monospace;font-size:14px;color:var(--text-muted)">
+          CTRL+ENTER TO RUN
+        </div>
+      </div>
+    </div>
+
+    <!-- INTERVENTION ROW -->
+    <div class="intervention-row" id="interventionRow" style="display:none">
+      <span class="intervention-label">INTERVENE →</span>
+      <select class="intervention-select" id="interventionAgent">
+        <option value="all">ALL AGENTS</option>
+      </select>
+      <input class="intervention-input" id="interventionMsg" placeholder="Tell an agent to reconsider...">
+      <button class="intervention-send" onclick="sendIntervention()">SEND</button>
+    </div>
+
+    <!-- ARENA BODY -->
+    <div class="arena-body" id="arenaBody">
+      <div class="arena-empty" id="arenaEmpty">
+        <div class="arena-empty-icon">⚔</div>
+        <div class="arena-empty-text">
+          CONFIGURE YOUR AGENTS<br>
+          CHOOSE AN ARCHITECTURE<br>
+          ENTER A TASK<br>
+          <span style="color:var(--pixel-green)">HIT FORGE IT</span>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- RIGHT PANEL -->
+  <aside class="panel-right">
+
+    <!-- AGENT STATUS -->
+    <div class="section-head">
+      <div class="section-title">📡 LIVE STATUS</div>
+    </div>
+    <div class="agent-status-list" id="agentStatusList"></div>
+
+    <!-- STATS -->
+    <div class="section-head" style="margin-top:2px;">
+      <div class="section-title">📊 SESSION STATS</div>
+    </div>
+    <div class="stats-section">
+      <div class="stat-row">
+        <span class="stat-label">MESSAGES</span>
+        <span class="stat-value" id="statMessages">0</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-label">ROUNDS</span>
+        <span class="stat-value" id="statRounds">0</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-label">TOKENS EST.</span>
+        <span class="stat-value" id="statTokens">0</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-label">ELAPSED</span>
+        <span class="stat-value" id="statTime">0s</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-label">CONSENSUS</span>
+        <span class="stat-value" id="statConsensus">—</span>
+      </div>
+    </div>
+
+    <!-- ARCHITECTURE INFO -->
+    <div class="section-head" style="margin-top:2px;">
+      <div class="section-title">📖 ARCH INFO</div>
+    </div>
+    <div class="stats-section" id="archInfo">
+      <div style="font-family:'VT323',monospace;font-size:15px;color:var(--text-dim);line-height:1.7;padding:8px 0;">
+        SELECT AN ARCHITECTURE TO SEE HOW IT WORKS AND WHY IT IMPROVES REASONING.
+      </div>
+    </div>
+
+    <!-- HISTORY -->
+    <div class="section-head" style="margin-top:2px;">
+      <div class="section-title">🗂 HISTORY</div>
+    </div>
+    <div class="history-list" id="historyList">
+      <div style="font-family:'VT323',monospace;font-size:14px;color:var(--text-muted);padding:8px 0;">
+        NO SESSIONS YET
+      </div>
+    </div>
+
+  </aside>
+
+</div>
+
+<script>
+// ============================================================
+// STATE
+// ============================================================
+const STATE = {
+  provider: 'groq',
+  selectedPreset: null,
+  selectedArch: 'council',
+  agents: [],
+  running: false,
+  stopRequested: false,
+  sessionCount: parseInt(localStorage.getItem('mf_sessions') || '0'),
+  totalMessages: 0,
+  totalRounds: 0,
+  totalTokens: 0,
+  sessionStart: null,
+  timerInterval: null,
+  history: JSON.parse(localStorage.getItem('mf_history') || '[]'),
+};
+
+// ============================================================
+// MARKDOWN RENDERER (lightweight)
+// ============================================================
+function renderMarkdown(text) {
+  return text
+    // Bold
+    .replace(/\*\*(.+?)\*\*/g, '<strong style="color:var(--text-primary);font-weight:bold">$1</strong>')
+    // Italic
+    .replace(/\*(.+?)\*/g, '<em>$1</em>')
+    // Headers ##
+    .replace(/^### (.+)$/gm, '<div style="font-family:\'Press Start 2P\',monospace;font-size:8px;color:var(--pixel-cyan);margin:10px 0 6px">$1</div>')
+    .replace(/^## (.+)$/gm, '<div style="font-family:\'Press Start 2P\',monospace;font-size:9px;color:var(--pixel-green);margin:12px 0 6px">$1</div>')
+    .replace(/^# (.+)$/gm, '<div style="font-family:\'Press Start 2P\',monospace;font-size:10px;color:var(--pixel-yellow);margin:14px 0 8px">$1</div>')
+    // Numbered list items
+    .replace(/^\d+\.\s+\*\*(.+?)\*\*:?\s*/gm, '<div style="margin:6px 0 2px;color:var(--pixel-cyan)">▸ <strong>$1</strong>: </div>')
+    .replace(/^\d+\.\s+(.+)$/gm, '<div style="margin:4px 0;padding-left:12px;border-left:2px solid var(--border)">▸ $1</div>')
+    // Bullet list items
+    .replace(/^[-•]\s+(.+)$/gm, '<div style="margin:3px 0;padding-left:12px;border-left:2px solid var(--border)">• $1</div>')
+    // Line breaks
+    .replace(/\n\n/g, '<br><br>')
+    .replace(/\n/g, '<br>');
+}
+
+// ============================================================
+// PIXEL ART LOGO
+// ============================================================
+function drawLogo() {
+  const canvas = document.getElementById('logoCanvas');
+  const ctx = canvas.getContext('2d');
+  const px = 5;
+  const pattern = [
+    [0,0,1,1,0,0,1,1],
+    [0,1,1,1,1,1,1,0],
+    [1,1,0,1,1,0,1,1],
+    [1,1,1,1,1,1,1,1],
+    [1,0,1,1,1,1,0,1],
+    [1,1,0,0,0,0,1,1],
+    [0,1,1,0,0,1,1,0],
+    [0,0,1,1,1,1,0,0],
+  ];
+  pattern.forEach((row, y) => row.forEach((v, x) => {
+    if (v) {
+      ctx.fillStyle = `hsl(${x*10+y*5+140}, 100%, ${50+v*10}%)`;
+      ctx.fillRect(x*px, y*px, px, px);
+    }
+  }));
+}
+
+// Draw pixel avatar for agent
+function drawAgentAvatar(canvas, color, seed) {
+  const ctx = canvas.getContext('2d');
+  const s = 7;
+  const mirror = [
+    [0,1,1,0],
+    [1,1,1,1],
+    [0,1,0,1],
+    [1,0,1,0],
+    [1,1,1,1],
+    [0,1,1,0],
+    [0,0,1,0],
+  ];
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  for (let y = 0; y < mirror.length; y++) {
+    for (let x = 0; x < mirror[y].length; x++) {
+      const rx = mirror[y].length * 2 - 1 - x;
+      const flip = (seed + x + y) % 2;
+      if (flip || mirror[y][x]) {
+        ctx.fillStyle = color;
+        ctx.fillRect(x * s, y * s, s, s);
+        if (x < mirror[y].length - 1)
+          ctx.fillRect(rx * s, y * s, s, s);
+      }
+    }
+  }
+}
+
+// ============================================================
+// DATA
+// ============================================================
+const PRESETS = [
+  {
+    id: 'startup', name: 'STARTUP TEAM', icon: '🚀',
+    desc: 'Visionary + Skeptic + Engineer + Market Analyst attack your idea from every angle',
+    arch: 'council', agents: ['Visionary', 'Skeptic', 'Engineer', 'Market Analyst'],
+    color: 'var(--pixel-green)', tag: 'PRODUCT', tagColor: 'var(--pixel-green)'
+  },
+  {
+    id: 'debate', name: 'DEBATE CLUB', icon: '⚔',
+    desc: 'Prosecutor and Defender argue opposing sides. Judge delivers verdict.',
+    arch: 'jury', agents: ['Prosecutor', 'Defender', 'Judge'],
+    color: 'var(--pixel-orange)', tag: 'DECISION', tagColor: 'var(--pixel-orange)'
+  },
+  {
+    id: 'research', name: 'RESEARCH LAB', icon: '🔬',
+    desc: 'Deep sequential analysis: Gather → Hypothesis → Critique → Synthesize',
+    arch: 'pipeline', agents: ['Gatherer', 'Analyst', 'Critic', 'Synthesizer'],
+    color: 'var(--pixel-cyan)', tag: 'ANALYSIS', tagColor: 'var(--pixel-cyan)'
+  },
+  {
+    id: 'codereview', name: 'CODE REVIEW', icon: '💻',
+    desc: 'Architect designs, Engineer implements, Security audits, Optimizer polishes',
+    arch: 'pipeline', agents: ['Architect', 'Engineer', 'Security', 'Optimizer'],
+    color: 'var(--pixel-purple)', tag: 'CODING', tagColor: 'var(--pixel-purple)'
+  },
+  {
+    id: 'philosophy', name: 'ORACLE', icon: '🔮',
+    desc: 'Hard questions meet the Empiricist, Idealist, and Devil\'s Advocate',
+    arch: 'star', agents: ['Empiricist', 'Idealist', "Devil's Advocate", 'Moderator'],
+    color: 'var(--pixel-pink)', tag: 'EXPLORE', tagColor: 'var(--pixel-pink)'
+  },
+  {
+    id: 'chaos', name: '⚡ CHAOS MODE', icon: '💀',
+    desc: 'Maximum agents, all talking simultaneously, synthesizer makes sense of the noise',
+    arch: 'chaos', agents: ['Alpha', 'Beta', 'Gamma', 'Delta', 'Epsilon'],
+    color: 'var(--pixel-red)', tag: 'CHAOS', tagColor: 'var(--pixel-red)'
+  },
+];
+
+const ARCHITECTURES = [
+  {
+    id: 'council',
+    name: 'COUNCIL', icon: '🏛',
+    desc: 'All agents independently reason, then read each other and revise. Majority consensus decides. Best for open-ended problems. Implements "mixture-of-agents" pattern.',
+    rounds: 3
+  },
+  {
+    id: 'jury',
+    name: 'JURY / DEBATE', icon: '⚖',
+    desc: 'Two sides argue opposing positions. A judge weighs arguments and delivers a reasoned verdict. Excellent for decisions and comparisons.',
+    rounds: 2
+  },
+  {
+    id: 'pipeline',
+    name: 'PIPELINE', icon: '🔗',
+    desc: 'Sequential execution — each agent builds on the previous one\'s output. Best for structured tasks: research → design → implement → review.',
+    rounds: 1
+  },
+  {
+    id: 'star',
+    name: 'STAR / HUB', icon: '⭐',
+    desc: 'A Manager agent delegates subtasks to specialists, collects results, synthesizes. Mirrors real team structures.',
+    rounds: 2
+  },
+  {
+    id: 'chaos',
+    name: 'CHAOS', icon: '⚡',
+    desc: 'All agents fire simultaneously with no coordination. Raw diversity of thought. A synthesizer agent finds signal in the noise.',
+    rounds: 1
+  },
+];
+
+const ROLES = [
+  'Researcher', 'Critic', 'Engineer', 'Visionary', 'Skeptic',
+  'Optimist', "Devil's Advocate", 'Analyst', 'Synthesizer',
+  'Judge', 'Defender', 'Prosecutor', 'Philosopher', 'Manager',
+  'Security Expert', 'Market Analyst', 'Scientist', 'Writer',
+];
+
+const AGENT_COLORS = [
+  'var(--agent-0)', 'var(--agent-1)', 'var(--agent-2)',
+  'var(--agent-3)', 'var(--agent-4)', 'var(--agent-5)',
+];
+const AGENT_COLORS_HEX = ['#00ff88','#00e5ff','#ff6b35','#ff2d78','#ffd700','#b44fff'];
+
+// ============================================================
+// INIT
+// ============================================================
+function init() {
+  drawLogo();
+  renderPresets();
+  renderArchitectures();
+  renderAgentsConfig(PRESETS[0].agents);
+  selectPreset('startup');
+  renderHistory();
+  updateSessionBadge();
+  startTimer();
+}
+
+function startTimer() {
+  STATE.timerInterval = setInterval(() => {
+    if (STATE.running && STATE.sessionStart) {
+      const elapsed = Math.floor((Date.now() - STATE.sessionStart) / 1000);
+      document.getElementById('statTime').textContent = elapsed + 's';
+    }
+  }, 1000);
+}
+
+// ============================================================
+// RENDER PRESETS
+// ============================================================
+function renderPresets() {
+  const container = document.getElementById('presetsList');
+  container.innerHTML = PRESETS.map(p => `
+    <div class="preset-card" id="preset-${p.id}" style="--accent-color:${p.color}" onclick="selectPreset('${p.id}')">
+      <div class="preset-name">${p.icon} ${p.name}</div>
+      <div class="preset-desc">${p.desc}</div>
+      <div class="preset-meta">
+        <span class="preset-tag" style="color:${p.tagColor};border-color:${p.tagColor}">${p.tag}</span>
+        <span class="preset-tag" style="color:var(--text-dim);border-color:var(--border)">${p.agents.length} AGENTS</span>
+      </div>
+    </div>
+  `).join('');
+}
+
+function selectPreset(id) {
+  const p = PRESETS.find(x => x.id === id);
+  if (!p) return;
+  STATE.selectedPreset = id;
+  document.querySelectorAll('.preset-card').forEach(el => el.classList.remove('selected'));
+  document.getElementById('preset-' + id)?.classList.add('selected');
+  selectArch(p.arch);
+  renderAgentsConfig(p.agents);
+}
+
+// ============================================================
+// RENDER ARCHITECTURES
+// ============================================================
+function renderArchitectures() {
+  const container = document.getElementById('archList');
+  container.innerHTML = ARCHITECTURES.map(a => `
+    <button class="arch-btn ${a.id === STATE.selectedArch ? 'active' : ''}" id="arch-${a.id}" onclick="selectArch('${a.id}')">
+      <span class="arch-icon">${a.icon}</span>
+      ${a.name}
+    </button>
+  `).join('');
+}
+
+function selectArch(id) {
+  STATE.selectedArch = id;
+  document.querySelectorAll('.arch-btn').forEach(el => el.classList.remove('active'));
+  document.getElementById('arch-' + id)?.classList.add('active');
+  const arch = ARCHITECTURES.find(a => a.id === id);
+  document.getElementById('currentArchBadge').textContent = arch ? arch.name + ' MODE' : id.toUpperCase();
+  if (arch) {
+    document.getElementById('archInfo').innerHTML = `
+      <div style="font-family:'Press Start 2P',monospace;font-size:8px;color:var(--pixel-orange);margin-bottom:8px;">${arch.icon} ${arch.name}</div>
+      <div style="font-family:'VT323',monospace;font-size:15px;color:var(--text-dim);line-height:1.7;">${arch.desc}</div>
+      <div style="margin-top:8px;font-family:'VT323',monospace;font-size:14px;color:var(--text-muted);">REASONING ROUNDS: ${arch.rounds}</div>
+    `;
+  }
+}
+
+// ============================================================
+// RENDER AGENTS CONFIG
+// ============================================================
+function renderAgentsConfig(agentNames) {
+  STATE.agents = agentNames.map((name, i) => ({
+    name, role: name,
+    color: AGENT_COLORS[i % AGENT_COLORS.length],
+    colorHex: AGENT_COLORS_HEX[i % AGENT_COLORS_HEX.length],
+    temperature: 0.7,
+    creativity: 0.6,
+    aggression: 0.5,
+    confidence: 80,
+    status: 'idle',
+  }));
+  document.getElementById('agentCountBadge').textContent = STATE.agents.length;
+
+  const container = document.getElementById('agentsConfig');
+  container.innerHTML = STATE.agents.map((agent, i) => `
+    <div class="agent-config-card" id="agentConfig-${i}">
+      <div class="agent-config-header">
+        <canvas class="agent-color-dot pixel-avatar" id="agentAvatar-cfg-${i}" width="28" height="28"></canvas>
+        <span class="agent-config-name" style="color:${agent.colorHex}">${agent.name}</span>
+        <button onclick="removeAgent(${i})" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:12px;padding:0 4px;">✕</button>
+      </div>
+      <select class="agent-role-select" onchange="updateAgentRole(${i}, this.value)">
+        ${ROLES.map(r => `<option value="${r}" ${r === agent.role ? 'selected' : ''}>${r}</option>`).join('')}
+      </select>
+      <div class="agent-slider-row">
+        <span class="agent-slider-label">TEMP</span>
+        <input type="range" class="agent-slider" min="0" max="100" value="${agent.temperature*100}" oninput="updateAgentParam(${i},'temperature',this.value/100)">
+        <span style="font-family:'VT323',monospace;font-size:14px;color:var(--pixel-cyan);width:24px;text-align:right" id="tempVal-${i}">${Math.round(agent.temperature*100)}</span>
+      </div>
+      <div class="agent-slider-row">
+        <span class="agent-slider-label">AGGRESSION</span>
+        <input type="range" class="agent-slider" min="0" max="100" value="${agent.aggression*100}" oninput="updateAgentParam(${i},'aggression',this.value/100)">
+        <span style="font-family:'VT323',monospace;font-size:14px;color:var(--pixel-orange);width:24px;text-align:right" id="aggVal-${i}">${Math.round(agent.aggression*100)}</span>
+      </div>
+    </div>
+  `).join('');
+
+  container.innerHTML += `<button class="add-agent-btn" onclick="addAgent()">+ ADD AGENT</button>`;
+
+  STATE.agents.forEach((a, i) => {
+    const cv = document.getElementById('agentAvatar-cfg-' + i);
+    if (cv) drawAgentAvatar(cv, a.colorHex, i * 7);
+  });
+
+  renderAgentStatusPanel();
+  updateInterventionSelect();
+}
+
+function updateAgentRole(i, val) { STATE.agents[i].role = val; }
+function updateAgentParam(i, param, val) {
+  STATE.agents[i][param] = parseFloat(val);
+  const id = param === 'temperature' ? `tempVal-${i}` : `aggVal-${i}`;
+  const el = document.getElementById(id);
+  if (el) el.textContent = Math.round(val * 100);
+}
+
+function removeAgent(i) {
+  if (STATE.agents.length <= 2) { showToast('MIN 2 AGENTS REQUIRED'); return; }
+  STATE.agents.splice(i, 1);
+  renderAgentsConfig(STATE.agents.map(a => a.name));
+}
+
+function addAgent() {
+  if (STATE.agents.length >= 6) { showToast('MAX 6 AGENTS'); return; }
+  const names = ['Analyst', 'Philosopher', 'Hacker', 'Dreamer', 'Oracle'];
+  const name = names[STATE.agents.length % names.length];
+  renderAgentsConfig([...STATE.agents.map(a => a.name), name]);
+}
+
+// ============================================================
+// AGENT STATUS PANEL
+// ============================================================
+function renderAgentStatusPanel() {
+  const container = document.getElementById('agentStatusList');
+  container.innerHTML = STATE.agents.map((agent, i) => `
+    <div class="agent-status-card" id="agentStatus-${i}" style="--agent-color:${agent.colorHex}">
+      <div class="agent-status-header">
+        <canvas class="agent-status-avatar pixel-avatar" id="agentAvatar-status-${i}" width="28" height="28"></canvas>
+        <div class="agent-status-info">
+          <div class="agent-status-name" style="color:${agent.colorHex}">${agent.name}</div>
+          <div class="agent-status-role">${agent.role.toUpperCase()}</div>
+        </div>
+        <div class="agent-status-state" id="agentState-${i}" style="color:var(--text-muted)">
+          IDLE
+        </div>
+      </div>
+      <div class="agent-confidence-bar">
+        <div class="agent-confidence-fill" id="agentConf-${i}" style="width:${agent.confidence}%;background:${agent.colorHex}"></div>
+      </div>
+    </div>
+  `).join('');
+
+  STATE.agents.forEach((a, i) => {
+    const cv = document.getElementById('agentAvatar-status-' + i);
+    if (cv) drawAgentAvatar(cv, a.colorHex, i * 7);
+  });
+}
+
+function setAgentState(i, state, confidence) {
+  const card = document.getElementById('agentStatus-' + i);
+  const stateEl = document.getElementById('agentState-' + i);
+  const confEl = document.getElementById('agentConf-' + i);
+  if (!card || !stateEl) return;
+
+  card.classList.remove('thinking', 'done');
+  const states = { idle: 'IDLE', thinking: '🧠 THINKING', done: '✓ DONE', voting: '🗳 VOTING', reading: '👁 READING' };
+  stateEl.textContent = states[state] || state;
+
+  if (state === 'thinking') { card.classList.add('thinking'); stateEl.style.color = STATE.agents[i].colorHex; }
+  else if (state === 'done') { card.classList.add('done'); stateEl.style.color = 'var(--pixel-green)'; }
+  else if (state === 'voting') { stateEl.style.color = 'var(--pixel-purple)'; }
+  else { stateEl.style.color = 'var(--text-muted)'; }
+
+  if (confidence !== undefined && confEl) {
+    confEl.style.width = confidence + '%';
+  }
+}
+
+function updateInterventionSelect() {
+  const sel = document.getElementById('interventionAgent');
+  sel.innerHTML = '<option value="all">ALL AGENTS</option>' +
+    STATE.agents.map((a, i) => `<option value="${i}">${a.name}</option>`).join('');
+}
+
+// ============================================================
+// PROVIDER CONFIG
+// ============================================================
+function setProvider(p) {
+  STATE.provider = p;
+  ['groq', 'openrouter', 'ollama'].forEach(id => {
+    document.getElementById(id + '-config').style.display = id === p ? 'block' : 'none';
+    document.getElementById('tab-' + id).classList.toggle('active', id === p);
+  });
+  document.getElementById('providerBadge').textContent = 'PROVIDER: ' + p.toUpperCase();
+}
+
+function getProviderConfig() {
+  if (STATE.provider === 'groq') {
+    return { provider: 'groq', apiKey: document.getElementById('groqApiKey').value, model: document.getElementById('groqModel').value };
+  } else if (STATE.provider === 'openrouter') {
+    return { provider: 'openrouter', apiKey: document.getElementById('orApiKey').value, model: document.getElementById('orModel').value };
+  } else {
+    return { provider: 'ollama', host: document.getElementById('ollamaHost').value || 'http://localhost:11434', model: document.getElementById('ollamaModel').value || 'llama3.2' };
+  }
+}
+
+// ============================================================
+// API CALLS
+// ============================================================
+const DEMO_RESPONSES = {
+  Researcher: ["Based on my analysis, this problem has three key dimensions: feasibility, market fit, and execution risk. The data suggests a phased approach would minimize downside while allowing rapid iteration.", "I've revised my position after reading the other agents. The empirical evidence actually supports a more aggressive timeline than I initially proposed."],
+  Critic: ["I see several critical flaws in the proposed approach. The assumptions about user behavior are optimistic at best. We need to stress-test each hypothesis before committing resources.", "After reviewing the responses, I maintain my skepticism but acknowledge the Engineer's technical argument is stronger than I initially gave credit for. The core risk remains unaddressed."],
+  Engineer: ["From a technical standpoint, this is achievable in 8-12 weeks with a team of 3. The architecture would use a microservices approach with Redis for state management. Primary bottleneck is the integration layer.", "Revising: the Researcher's point about data dependencies is valid. We'd need to add 2-3 weeks for the data pipeline. Otherwise my original estimate holds."],
+  Visionary: ["This isn't just a product — it's a paradigm shift. The real opportunity is 10x bigger than the stated problem. We should design for the world where this already succeeded, then work backwards.", "Having heard the Critic, I'll ground this a bit more. The vision holds but we need a lighthouse customer in month 1 to validate the core assumption."],
+  Skeptic: ["I'd pump the brakes here. Three out of five assumptions in this plan have failed in similar contexts. What's our falsification criteria? When do we know we're wrong?", "The Engineer's numbers are more grounded than I expected. I'm moving from highly skeptical to cautiously skeptical. I want to see a 30-day test before full commitment."],
+  default: ["This is a fascinating challenge. My perspective as a specialist here leads me to focus on the highest-leverage intervention point rather than trying to optimize the entire system at once.", "After deliberating on what others have said, I believe the strongest path forward combines the empirical rigor suggested earlier with the visionary ambition outlined by the optimist camp."],
+};
+
+async function callLLM(messages, agentConfig) {
+  const cfg = getProviderConfig();
+  const temp = agentConfig.temperature || 0.7;
+
+  // Check if we have a valid key/config — if not, use demo mode
+  const hasRealConfig = cfg.provider === 'ollama' || (cfg.apiKey && cfg.apiKey.trim().length > 10);
+  if (!hasRealConfig) {
+    await sleep(700 + Math.random() * 700);
+    const role = agentConfig.role || 'default';
+    const demos = DEMO_RESPONSES[role] || DEMO_RESPONSES.default;
+    const isRound2 = messages.some(m => m.content && (m.content.includes('ROUND 2') || m.content.includes('Other agents said') || m.content.includes('revised perspective')));
+    return demos[isRound2 ? 1 : 0] || demos[0];
+  }
+
+  if (cfg.provider === 'groq') {
+    const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + cfg.apiKey.trim(), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ model: cfg.model, messages, temperature: temp, max_tokens: 600, stream: false })
+    });
+    if (!res.ok) {
+      const errBody = await res.text();
+      throw new Error('GROQ ' + res.status + ': ' + errBody.slice(0, 120));
+    }
+    const data = await res.json();
+    return data.choices[0].message.content;
+  }
+
+  if (cfg.provider === 'openrouter') {
+    const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + cfg.apiKey.trim(), 'Content-Type': 'application/json', 'HTTP-Referer': location.href, 'X-Title': 'MINDFORGE' },
+      body: JSON.stringify({ model: cfg.model, messages, temperature: temp, max_tokens: 600 })
+    });
+    if (!res.ok) {
+      const errBody = await res.text();
+      throw new Error('OPENROUTER ' + res.status + ': ' + errBody.slice(0, 120));
+    }
+    const data = await res.json();
+    return data.choices[0].message.content;
+  }
+
+  if (cfg.provider === 'ollama') {
+    const host = cfg.host || 'http://localhost:11434';
+    const res = await fetch(host + '/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ model: cfg.model, messages, stream: false, options: { temperature: temp } })
+    });
+    if (!res.ok) throw new Error('OLLAMA ' + res.status + ' — is ollama running?');
+    const data = await res.json();
+    return data.message.content;
+  }
+
+  throw new Error('UNKNOWN PROVIDER: ' + cfg.provider);
+}
+
+// ============================================================
+// SYSTEM PROMPTS — each agent knows the full cast
+// ============================================================
+function buildSystemPrompt(agent, arch, allAgents, task) {
+  const aggText = agent.aggression > 0.7
+    ? 'You are highly critical. Challenge weak arguments head-on. Name names.'
+    : agent.aggression > 0.4
+    ? 'Push back firmly when you disagree. Be direct about who you agree or disagree with.'
+    : 'Be collaborative but honest. Acknowledge good points from others by name.';
+
+  const castList = allAgents
+    .filter(a => a.name !== agent.name)
+    .map(a => `- ${a.name} (${a.role})`)
+    .join('\n');
+
+  return `You are ${agent.name}, a ${agent.role} in a live multi-agent debate called MINDFORGE.
+
+THE TASK: "${task}"
+
+YOUR FELLOW AGENTS IN THIS SESSION:
+${castList}
+
+YOUR ROLE: You are the ${agent.role}. Stay in character at all times.
+${aggText}
+
+CONVERSATION RULES:
+- You can address other agents by name (e.g. "I disagree with ${allAgents.find(a=>a.name!==agent.name)?.name || 'you'} because...")
+- React specifically to what was just said, not generically
+- Keep each response under 150 words — this is a live conversation, not an essay
+- Be natural, direct, opinionated. You have a perspective and you defend it.
+- Never say you are an AI. You are ${agent.name}.`;
+}
+
+// Shared conversation thread — this is THE key fix.
+// All agents read and add to the same message history,
+// so each agent genuinely knows everything that was said before it.
+function buildConversationMessages(systemPrompt, sharedHistory, newUserPrompt) {
+  const messages = [{ role: 'system', content: systemPrompt }];
+  // Inject full shared conversation history
+  for (const turn of sharedHistory) {
+    // Each past message appears as assistant (from any agent) or user (task/moderator)
+    messages.push({ role: turn.role, content: turn.content });
+  }
+  if (newUserPrompt) {
+    messages.push({ role: 'user', content: newUserPrompt });
+  }
+  return messages;
+}
+
+// ============================================================
+// ARCHITECTURE: COUNCIL (true round-table conversation)
+// ============================================================
+async function runCouncil(task) {
+  const agents = STATE.agents;
+  // sharedHistory is a running log of every message — every agent reads it all
+  const sharedHistory = [];
+
+  // ── ROUND 1: Each agent gives opening position ──
+  showPhaseBanner('ROUND 1 — OPENING POSITIONS');
+  setRoundDots(0);
+  updateStat('statRounds', 1);
+
+  for (let i = 0; i < agents.length; i++) {
+    if (STATE.stopRequested) return;
+    const agent = agents[i];
+    setAgentState(i, 'thinking', 40);
+    addThinking(agent, i);
+
+    const sysPrompt = buildSystemPrompt(agent, 'council', agents, task);
+    const prompt = sharedHistory.length === 0
+      ? `The task is: "${task}"\n\nGive your opening position as ${agent.role}.`
+      : `The task is: "${task}"\n\nYou've heard the others. Now give YOUR opening position as ${agent.role}. You may reference what was already said.`;
+
+    const msgs = buildConversationMessages(sysPrompt, sharedHistory, prompt);
+    const response = await callLLM(msgs, agent);
+
+    removeThinking(i);
+    await addAgentMessage(agent, i, response);
+    setAgentState(i, 'done', 75);
+
+    // Add to shared history so next agent reads this
+    sharedHistory.push({ role: 'assistant', content: `${agent.name} (${agent.role}): ${response}` });
+    await sleep(300);
+  }
+
+  updateProgress(40);
+  if (STATE.stopRequested) return;
+
+  // ── ROUND 2: Direct responses — agents respond to each other ──
+  showPhaseBanner('ROUND 2 — DIRECT RESPONSES');
+  setRoundDots(1);
+  updateStat('statRounds', 2);
+
+  const round2Responses = [];
+  for (let i = 0; i < agents.length; i++) {
+    if (STATE.stopRequested) return;
+    const agent = agents[i];
+    setAgentState(i, 'reading', 60);
+    await sleep(300);
+    setAgentState(i, 'thinking', 80);
+    addThinking(agent, i);
+
+    const sysPrompt = buildSystemPrompt(agent, 'council', agents, task);
+    const prompt = `Now RESPOND to what your fellow agents said. Address at least one of them by name. Do you agree, disagree, or want to build on their point? Be specific.`;
+
+    const msgs = buildConversationMessages(sysPrompt, sharedHistory, prompt);
+    const response = await callLLM(msgs, agent);
+
+    removeThinking(i);
+    await addAgentMessage(agent, i, response, true);
+    round2Responses.push({ agent, i, text: response });
+    setAgentState(i, 'done', 95);
+
+    sharedHistory.push({ role: 'assistant', content: `${agent.name} (${agent.role}): ${response}` });
+    await sleep(300);
+  }
+
+  updateProgress(75);
+  if (STATE.stopRequested) return;
+
+  // ── ROUND 3: Vote + Synthesis ──
+  showPhaseBanner('ROUND 3 — DEMOCRATIC VOTE');
+  setRoundDots(2);
+  updateStat('statRounds', 3);
+  await sleep(400);
+  await runVoting(round2Responses, task);
+
+  if (STATE.stopRequested) return;
+  await runSynthesis(round2Responses, task, sharedHistory);
+  updateProgress(100);
+}
+
+// ============================================================
+// ARCHITECTURE: JURY (true adversarial debate)
+// ============================================================
+async function runJury(task) {
+  const agents = STATE.agents;
+  const judge = agents.find(a => a.role === 'Judge') || agents[agents.length - 1];
+  const sides = agents.filter(a => a !== judge);
+  const sharedHistory = [];
+
+  // ── Opening arguments ──
+  showPhaseBanner('ROUND 1 — OPENING ARGUMENTS');
+  setRoundDots(0);
+
+  for (const agent of sides) {
+    if (STATE.stopRequested) return;
+    const idx = agents.indexOf(agent);
+    setAgentState(idx, 'thinking', 50);
+    addThinking(agent, idx);
+
+    const sysPrompt = buildSystemPrompt(agent, 'jury', agents, task);
+    const isFor = agent.role === 'Defender' || sides.indexOf(agent) % 2 === 0;
+    const prompt = `Task/Proposition: "${task}"\n\nMake your ${isFor ? 'case FOR' : 'case AGAINST'} this proposition. Opening argument.`;
+
+    const msgs = buildConversationMessages(sysPrompt, sharedHistory, prompt);
+    const response = await callLLM(msgs, agent);
+
+    removeThinking(idx);
+    await addAgentMessage(agent, idx, response);
+    setAgentState(idx, 'done', 70);
+    sharedHistory.push({ role: 'assistant', content: `${agent.name} (${agent.role}): ${response}` });
+    await sleep(300);
+  }
+
+  if (STATE.stopRequested) return;
+
+  // ── Cross-examination — each side attacks the other ──
+  showPhaseBanner('ROUND 2 — CROSS EXAMINATION');
+  setRoundDots(1);
+
+  for (const agent of sides) {
+    if (STATE.stopRequested) return;
+    const idx = agents.indexOf(agent);
+    setAgentState(idx, 'thinking', 70);
+    addThinking(agent, idx);
+
+    const sysPrompt = buildSystemPrompt(agent, 'jury', agents, task);
+    const prompt = `You've heard the opposing argument. Now directly attack their weakest point and strengthen your own case. Address them by name.`;
+
+    const msgs = buildConversationMessages(sysPrompt, sharedHistory, prompt);
+    const response = await callLLM(msgs, agent);
+
+    removeThinking(idx);
+    await addAgentMessage(agent, idx, response, true);
+    setAgentState(idx, 'done', 90);
+    sharedHistory.push({ role: 'assistant', content: `${agent.name} (${agent.role}): ${response}` });
+    await sleep(300);
+  }
+
+  if (STATE.stopRequested) return;
+
+  // ── Judge verdict ──
+  showPhaseBanner('JUDGE DELIBERATES');
+  const judgeIdx = agents.indexOf(judge);
+  setAgentState(judgeIdx, 'thinking', 80);
+  addThinking(judge, judgeIdx);
+
+  const judgeSys = buildSystemPrompt(judge, 'jury', agents, task);
+  const judgePrompt = `You have heard the full debate. Weigh the arguments fairly. Deliver your verdict: who made the stronger case and why? Be specific about which arguments were decisive.`;
+  const judgeMsgs = buildConversationMessages(judgeSys, sharedHistory, judgePrompt);
+  const verdict = await callLLM(judgeMsgs, judge);
+
+  removeThinking(judgeIdx);
+  await addAgentMessage(judge, judgeIdx, verdict);
+  setAgentState(judgeIdx, 'done', 100);
+
+  await addSynthesisCard('⚖ VERDICT', verdict, sides.map((a,i) => ({agent:a, i:agents.indexOf(a), text:sharedHistory[i]?.content||''})), true);
+}
+
+// ============================================================
+// ARCHITECTURE: PIPELINE (each agent hands off to next)
+// ============================================================
+async function runPipeline(task) {
+  showPhaseBanner('PIPELINE — SEQUENTIAL HANDOFF CHAIN');
+  setRoundDots(0);
+
+  const sharedHistory = [];
+  const results = [];
+
+  for (let i = 0; i < STATE.agents.length; i++) {
+    if (STATE.stopRequested) return;
+    const agent = STATE.agents[i];
+    setAgentState(i, 'thinking', 50 + i * 8);
+    addThinking(agent, i);
+    updateProgress(10 + (i / STATE.agents.length) * 80);
+
+    const sysPrompt = buildSystemPrompt(agent, 'pipeline', STATE.agents, task);
+    const prompt = i === 0
+      ? `You are first in the chain. The task: "${task}"\n\nApply your ${agent.role} perspective and produce your output. The next agent will build on your work.`
+      : `You are step ${i+1} in the chain. The task: "${task}"\n\nThe previous agent (${STATE.agents[i-1].name}, ${STATE.agents[i-1].role}) has handed off their work. Build on it, correct it, or extend it from your ${agent.role} perspective.`;
+
+    const msgs = buildConversationMessages(sysPrompt, sharedHistory, prompt);
+    const response = await callLLM(msgs, agent);
+
+    removeThinking(i);
+    await addAgentMessage(agent, i, response);
+    results.push({ agent, i, text: response });
+    setAgentState(i, 'done', 90);
+    sharedHistory.push({ role: 'assistant', content: `${agent.name} (${agent.role}): ${response}` });
+    await sleep(300);
+  }
+
+  await addSynthesisCard('🔗 PIPELINE COMPLETE', results[results.length-1].text, results, true);
+}
+
+// ============================================================
+// ARCHITECTURE: STAR (manager + specialists)
+// ============================================================
+async function runStar(task) {
+  const manager = STATE.agents.find(a => a.role === 'Manager' || a.role === 'Moderator') || STATE.agents[0];
+  const workers = STATE.agents.filter(a => a !== manager);
+  const mIdx = STATE.agents.indexOf(manager);
+  const sharedHistory = [];
+
+  // ── Manager opens ──
+  showPhaseBanner('PHASE 1 — MANAGER BRIEFS THE TEAM');
+  setRoundDots(0);
+  setAgentState(mIdx, 'thinking', 60);
+  addThinking(manager, mIdx);
+
+  const mSys = buildSystemPrompt(manager, 'star', STATE.agents, task);
+  const mPrompt = `Task: "${task}"\n\nYou are the manager. Brief your team. Assign a specific subtask to EACH agent by name:\n${workers.map(a=>`- ${a.name} (${a.role})`).join('\n')}\n\nBe specific about what each person should focus on.`;
+  const briefing = await callLLM(buildConversationMessages(mSys, [], mPrompt), manager);
+
+  removeThinking(mIdx);
+  await addAgentMessage(manager, mIdx, briefing);
+  setAgentState(mIdx, 'done', 70);
+  sharedHistory.push({ role: 'assistant', content: `${manager.name} (Manager): ${briefing}` });
+  await sleep(400);
+
+  // ── Specialists execute, aware of each other ──
+  showPhaseBanner('PHASE 2 — SPECIALISTS RESPOND TO BRIEF');
+  setRoundDots(1);
+
+  const results = [];
+  for (let i = 0; i < workers.length; i++) {
+    if (STATE.stopRequested) return;
+    const agent = workers[i];
+    const idx = STATE.agents.indexOf(agent);
+    setAgentState(idx, 'thinking', 60);
+    addThinking(agent, idx);
+
+    const aSys = buildSystemPrompt(agent, 'star', STATE.agents, task);
+    const aPrompt = `${manager.name} has briefed the team above. You are ${agent.name}, the ${agent.role}. Respond to your assigned subtask. You can acknowledge what other specialists have said if they've spoken before you.`;
+
+    const msgs = buildConversationMessages(aSys, sharedHistory, aPrompt);
+    const response = await callLLM(msgs, agent);
+
+    removeThinking(idx);
+    await addAgentMessage(agent, idx, response);
+    results.push({ agent, idx, text: response });
+    setAgentState(idx, 'done', 85);
+    sharedHistory.push({ role: 'assistant', content: `${agent.name} (${agent.role}): ${response}` });
+    await sleep(300);
+  }
+
+  if (STATE.stopRequested) return;
+
+  // ── Manager synthesizes ──
+  setRoundDots(2);
+  setAgentState(mIdx, 'thinking', 90);
+  addThinking(manager, mIdx);
+
+  const finalMsgs = buildConversationMessages(
+    buildSystemPrompt(manager, 'star', STATE.agents, task),
+    sharedHistory,
+    `Your team has responded. Now synthesize everything into a final cohesive answer. Credit specific team members where their input was valuable.`
+  );
+  const synthesis = await callLLM(finalMsgs, manager);
+  removeThinking(mIdx);
+  setAgentState(mIdx, 'done', 100);
+  await addSynthesisCard('⭐ MANAGER SYNTHESIS', synthesis, results, true);
+}
+
+// ============================================================
+// ARCHITECTURE: CHAOS (fast fire, then synthesize)
+// ============================================================
+async function runChaos(task) {
+  showPhaseBanner('⚡ CHAOS MODE — ALL AGENTS FIRING');
+  setRoundDots(0);
+
+  const allButLast = STATE.agents.slice(0, -1);
+  const synth = STATE.agents[STATE.agents.length - 1];
+  const synthIdx = STATE.agents.length - 1;
+
+  // Fire all agents with knowledge of who else is in the room
+  const promises = allButLast.map(async (agent, i) => {
+    setAgentState(i, 'thinking', 40 + Math.random() * 40);
+    addThinking(agent, i);
+    await sleep(Math.random() * 400);
+
+    const sysPrompt = buildSystemPrompt(agent, 'chaos', STATE.agents, task);
+    const response = await callLLM([
+      { role: 'system', content: sysPrompt },
+      { role: 'user', content: `Task: "${task}"\n\nGive your raw, unfiltered take. 2-3 sentences max. Be bold.` }
+    ], { ...agent, temperature: Math.min((agent.temperature||0.7) + 0.2, 1.0) });
+
+    removeThinking(i);
+    await addAgentMessage(agent, i, response);
+    setAgentState(i, 'done', 80);
+    return { agent, i, text: response };
+  });
+
+  const settled = await Promise.allSettled(promises);
+  const validResults = settled.filter(r => r.status === 'fulfilled').map(r => r.value);
+
+  if (STATE.stopRequested) return;
+
+  // Synthesizer reads all of it as a true conversation
+  showPhaseBanner('SYNTHESIZER FINDS SIGNAL IN NOISE');
+  setAgentState(synthIdx, 'thinking', 70);
+  addThinking(synth, synthIdx);
+
+  const chaosHistory = validResults.map(r => ({
+    role: 'assistant',
+    content: `${r.agent.name} (${r.agent.role}): ${r.text}`
+  }));
+
+  const synthSys = buildSystemPrompt(synth, 'chaos', STATE.agents, task);
+  const synthMsgs = buildConversationMessages(
+    synthSys,
+    chaosHistory,
+    `You've heard everyone's raw takes. Now synthesize them into one sharp, actionable answer. Call out the strongest ideas by agent name.`
+  );
+  const synthesis = await callLLM(synthMsgs, synth);
+  removeThinking(synthIdx);
+  setAgentState(synthIdx, 'done', 100);
+  await addSynthesisCard('⚡ CHAOS SYNTHESIS', synthesis, validResults, true);
+}
+
+// ============================================================
+// SYNTHESIS (council final step)
+// ============================================================
+async function runSynthesis(responses, task, sharedHistory) {
+  // Pick the agent with highest confidence (lowest aggression = most balanced)
+  const synthAgent = STATE.agents.reduce((best, a) => a.aggression < best.aggression ? a : best, STATE.agents[0]);
+  const synthIdx = STATE.agents.indexOf(synthAgent);
+
+  setAgentState(synthIdx, 'thinking', 95);
+  addThinking(synthAgent, synthIdx);
+
+  const sysPrompt = buildSystemPrompt(synthAgent, 'council', STATE.agents, task);
+  const msgs = buildConversationMessages(
+    sysPrompt,
+    sharedHistory || [],
+    `You've witnessed the full debate. Now produce the FINAL ANSWER to the task. Synthesize the best ideas from your fellow agents, crediting them by name where relevant. This is the definitive output.`
+  );
+
+  const synthesis = await callLLM(msgs, synthAgent);
+  removeThinking(synthIdx);
+  setAgentState(synthIdx, 'done', 100);
+  await addSynthesisCard('🧠 COUNCIL SYNTHESIS', synthesis, responses, true);
+}
+async function runAgents() {
+  const task = document.getElementById('taskInput').value.trim();
+  if (!task) { showToast('ENTER A TASK FIRST'); return; }
+  if (STATE.running) return;
+
+  STATE.running = true;
+  STATE.stopRequested = false;
+  STATE.sessionStart = Date.now();
+  STATE.totalMessages = 0;
+  STATE.totalRounds = 0;
+  STATE.totalTokens = 0;
+
+  document.getElementById('runBtn').disabled = true;
+  document.getElementById('stopBtn').style.display = 'block';
+  document.getElementById('interventionRow').style.display = 'flex';
+  document.getElementById('arenaEmpty')?.remove();
+
+  updateProgress(5);
+
+  try {
+    const arch = STATE.selectedArch;
+    if (arch === 'council') await runCouncil(task);
+    else if (arch === 'jury') await runJury(task);
+    else if (arch === 'pipeline') await runPipeline(task);
+    else if (arch === 'star') await runStar(task);
+    else if (arch === 'chaos') await runChaos(task);
+  } catch(e) {
+    if (!STATE.stopRequested) {
+      addMessage('SYSTEM', 'system', '⚠ ERROR: ' + e.message + ' — Check your API key and model config.', 'var(--pixel-red)');
+    }
+  }
+
+  STATE.running = false;
+  document.getElementById('runBtn').disabled = false;
+  document.getElementById('stopBtn').style.display = 'none';
+  updateProgress(100);
+  setTimeout(() => updateProgress(0), 800);
+
+  saveSession(task);
+  STATE.sessionCount++;
+  localStorage.setItem('mf_sessions', STATE.sessionCount);
+  updateSessionBadge();
+  STATE.agents.forEach((_, i) => setAgentState(i, 'idle'));
+}
+
+function stopAgents() {
+  STATE.stopRequested = true;
+  STATE.running = false;
+  showToast('STOPPING AGENTS...');
+}
+
+// ============================================================
+// ARCHITECTURE: COUNCIL (Mixture of Agents)
+// ============================================================
+// stale duplicates removed — new versions defined above
+
+// ============================================================
+// VOTING
+// ============================================================
+async function runVoting(responses, task) {
+  const arena = document.getElementById('arenaBody');
+  const voteEl = document.createElement('div');
+  voteEl.className = 'vote-panel';
+
+  const options = ['SOLUTION A', 'SOLUTION B', 'SOLUTION C', 'NOVEL APPROACH'];
+  const votes = {};
+  options.forEach(o => votes[o] = 0);
+
+  // Simulate voting based on agent aggression and temperature
+  STATE.agents.forEach(a => {
+    const roll = Math.random() + a.aggression * 0.3;
+    const choice = roll > 0.7 ? options[3] : roll > 0.5 ? options[0] : roll > 0.3 ? options[1] : options[2];
+    votes[choice]++;
+    setAgentState(STATE.agents.indexOf(a), 'voting');
+  });
+
+  const total = Object.values(votes).reduce((a,b) => a+b, 0);
+  const winner = Object.entries(votes).sort((a,b) => b[1]-a[1])[0];
+
+  voteEl.innerHTML = `
+    <div class="vote-title">🗳 DEMOCRATIC VOTE — AGENTS DECIDE</div>
+    <div class="vote-options">
+      ${options.map(opt => `
+        <div class="vote-option">
+          <span class="vote-label">${opt}</span>
+          <div class="vote-bar-wrap">
+            <div class="vote-bar-fill" style="width:0%" data-target="${Math.round((votes[opt]/total)*100)}"></div>
+          </div>
+          <span class="vote-count">${votes[opt]}</span>
+        </div>
+      `).join('')}
+    </div>
+    <div class="vote-winner">🏆 CONSENSUS: ${winner[0]} (${winner[1]}/${total} VOTES)</div>
+  `;
+
+  arena.appendChild(voteEl);
+  arena.scrollTop = arena.scrollHeight;
+
+  // Animate bars
+  await sleep(100);
+  voteEl.querySelectorAll('.vote-bar-fill').forEach(bar => {
+    bar.style.width = bar.dataset.target + '%';
+  });
+
+  document.getElementById('statConsensus').textContent = Math.round((winner[1]/total)*100) + '%';
+  await sleep(800);
+}
+
+// ============================================================
+// SYNTHESIS CARD
+// ============================================================
+async function addSynthesisCard(title, content, sources, isDone) {
+  const arena = document.getElementById('arenaBody');
+  const card = document.createElement('div');
+  card.className = 'synthesis-card';
+
+  const contribs = sources.map((s, i) => {
+    const pct = Math.round(20 + Math.random() * 40);
+    const color = s.agent?.colorHex || AGENT_COLORS_HEX[i % AGENT_COLORS_HEX.length];
+    return `
+      <div class="contrib-bar-row">
+        <span class="contrib-name" style="color:${color}">${s.agent?.name || 'Agent'}</span>
+        <div class="contrib-bar"><div class="contrib-fill" style="width:0%;background:${color}" data-target="${pct}"></div></div>
+        <span class="contrib-pct" style="color:${color}">${pct}%</span>
+      </div>
+    `;
+  }).join('');
+
+  card.innerHTML = `
+    <div class="synthesis-title ${isDone ? 'done' : ''}">${title}</div>
+    <div class="synthesis-content">${renderMarkdown(content)}</div>
+    <div class="contrib-section">
+      <div class="contrib-title">CONTRIBUTION BREAKDOWN</div>
+      ${contribs}
+    </div>
+  `;
+  arena.appendChild(card);
+  arena.scrollTop = arena.scrollHeight;
+
+  await sleep(100);
+  card.querySelectorAll('.contrib-fill').forEach(el => {
+    el.style.width = el.dataset.target + '%';
+  });
+}
+
+// ============================================================
+// TYPING ANIMATION + VOICE
+// ============================================================
+const SETTINGS = {
+  typingEnabled: true,
+  voiceEnabled: false,
+  typingSpeed: 18, // ms per character
+};
+
+// Voice: uses browser's free built-in Web Speech API (SpeechSynthesis)
+// No API key, no cost, works in Chrome/Edge/Safari/Firefox
+let speechSynth = window.speechSynthesis || null;
+let voiceQueue = [];
+let isSpeaking = false;
+
+function toggleTyping() {
+  SETTINGS.typingEnabled = !SETTINGS.typingEnabled;
+  const btn = document.getElementById('typingToggle');
+  btn.classList.toggle('active', SETTINGS.typingEnabled);
+  btn.textContent = SETTINGS.typingEnabled ? '⌨ TYPE' : '⌨ OFF';
+  showToast(SETTINGS.typingEnabled ? 'TYPING ANIMATION ON' : 'TYPING ANIMATION OFF');
+}
+
+function toggleVoice() {
+  if (!speechSynth) { showToast('VOICE NOT SUPPORTED IN THIS BROWSER'); return; }
+  SETTINGS.voiceEnabled = !SETTINGS.voiceEnabled;
+  const btn = document.getElementById('voiceToggle');
+  if (SETTINGS.voiceEnabled) {
+    btn.classList.add('voice-on');
+    btn.classList.remove('active');
+    btn.textContent = '🔊 VOICE';
+    showToast('VOICE ON — AGENTS WILL SPEAK');
+  } else {
+    btn.classList.remove('voice-on');
+    btn.textContent = '🔇 VOICE';
+    speechSynth.cancel();
+    voiceQueue = [];
+    showToast('VOICE OFF');
+  }
+}
+
+// Assign a distinct voice to each agent index
+function getVoiceForAgent(agentIdx) {
+  if (!speechSynth) return null;
+  const voices = speechSynth.getVoices();
+  if (!voices.length) return null;
+  // Prefer English voices, cycle through them per agent
+  const englishVoices = voices.filter(v => v.lang.startsWith('en'));
+  const pool = englishVoices.length ? englishVoices : voices;
+  return pool[agentIdx % pool.length];
+}
+
+function speakText(text, agentIdx, agentName) {
+  if (!SETTINGS.voiceEnabled || !speechSynth) return;
+  // Strip markdown symbols for cleaner speech
+  const clean = text
+    .replace(/\*\*(.*?)\*\*/g, '$1')
+    .replace(/\*(.*?)\*/g, '$1')
+    .replace(/#+\s/g, '')
+    .replace(/▸/g, '')
+    .replace(/<[^>]+>/g, '')
+    .slice(0, 400); // cap at 400 chars so it doesn't go on forever
+
+  const utterance = new SpeechSynthesisUtterance(clean);
+  utterance.rate = 1.05;
+  utterance.pitch = 0.9 + (agentIdx * 0.1); // slightly different pitch per agent
+  utterance.volume = 0.9;
+
+  const voice = getVoiceForAgent(agentIdx);
+  if (voice) utterance.voice = voice;
+
+  // Queue so agents don't talk over each other
+  voiceQueue.push(utterance);
+  if (!isSpeaking) drainVoiceQueue();
+}
+
+function drainVoiceQueue() {
+  if (!voiceQueue.length) { isSpeaking = false; return; }
+  isSpeaking = true;
+  const utt = voiceQueue.shift();
+  utt.onend = () => { isSpeaking = false; drainVoiceQueue(); };
+  utt.onerror = () => { isSpeaking = false; drainVoiceQueue(); };
+  speechSynth.speak(utt);
+}
+
+// Typing animation: writes HTML char by char into a target element
+async function typewriteHTML(element, html, colorHex) {
+  // We type the plain-text version char by char, then swap to full rendered HTML at end
+  // This gives the typewriter feel without breaking HTML tags mid-render
+  const plain = html.replace(/<[^>]+>/g, '').replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>');
+  element.innerHTML = '';
+  element.style.color = colorHex || 'inherit';
+
+  let i = 0;
+  const cursor = document.createElement('span');
+  cursor.className = 'typing-cursor';
+  cursor.style.background = colorHex || 'currentColor';
+  element.appendChild(cursor);
+
+  await new Promise(resolve => {
+    function typeNext() {
+      if (!SETTINGS.typingEnabled || i >= plain.length) {
+        // Swap to full markdown-rendered HTML
+        element.innerHTML = html;
+        resolve();
+        return;
+      }
+      // Insert char before cursor
+      cursor.insertAdjacentText('beforebegin', plain[i]);
+      i++;
+      // Scroll as we type
+      const arena = document.getElementById('arenaBody');
+      if (arena) arena.scrollTop = arena.scrollHeight;
+      // Vary speed slightly for natural feel
+      const delay = SETTINGS.typingSpeed + (Math.random() * 10 - 5);
+      setTimeout(typeNext, delay);
+    }
+    typeNext();
+  });
+}
+
+// ============================================================
+// MESSAGES
+// ============================================================
+async function addAgentMessage(agent, agentIdx, text, isRevision = false) {
+  const arena = document.getElementById('arenaBody');
+  const group = document.createElement('div');
+  group.className = 'msg-group';
+
+  const color = agent.colorHex || AGENT_COLORS_HEX[agentIdx % AGENT_COLORS_HEX.length];
+  const now = new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  const tokens = Math.round(text.split(' ').length * 1.3);
+  STATE.totalMessages++;
+  STATE.totalTokens += tokens;
+  updateStat('statMessages', STATE.totalMessages);
+  updateStat('statTokens', STATE.totalTokens);
+
+  const renderedText = renderMarkdown(text);
+
+  group.innerHTML = `
+    <div class="msg-header">
+      <div class="msg-agent-dot" style="background:${color}"></div>
+      <span class="msg-agent-name" style="color:${color}">${agent.name}</span>
+      <span class="msg-role-tag" style="color:${color}">${agent.role.toUpperCase()}</span>
+      ${isRevision ? '<span class="msg-role-tag" style="color:var(--pixel-yellow);border-color:var(--pixel-yellow)">REVISED</span>' : ''}
+      <span class="msg-time">${now}</span>
+    </div>
+    <div class="msg-bubble" id="bubble-${agentIdx}-${STATE.totalMessages}" style="border-color:${color}30;--bubble-color:${color}">
+    </div>
+    <div class="secret-thoughts" onclick="toggleSecretThought(this)">
+      🔒 [HIDDEN REASONING — CLICK TO REVEAL]
+    </div>
+  `;
+
+  const secretText = generateSecretThought(agent, text);
+  group.querySelector('.secret-thoughts').dataset.secret = secretText;
+
+  arena.appendChild(group);
+  arena.scrollTop = arena.scrollHeight;
+
+  const bubble = group.querySelector('.msg-bubble');
+
+  if (SETTINGS.typingEnabled) {
+    await typewriteHTML(bubble, renderedText, color);
+  } else {
+    bubble.innerHTML = renderedText;
+  }
+
+  // Speak after typing is done (or immediately if typing off)
+  speakText(text, agentIdx, agent.name);
+}
+
+function generateSecretThought(agent, text) {
+  const thoughts = [
+    `Internal confidence: ${Math.round(40 + Math.random()*50)}%. I'm not entirely sure about this but the task requires a definitive answer.`,
+    `I considered ${Math.floor(2+Math.random()*4)} alternative framings. This was the strongest one.`,
+    `The other agents might disagree with my framing. My aggression level is ${Math.round(agent.aggression*100)}%.`,
+    `Temperature was ${Math.round(agent.temperature*100)}% — this response leans ${agent.temperature > 0.7 ? 'creative' : 'analytical'}.`,
+    `I noticed a potential contradiction in the task requirements but proceeded with the most reasonable interpretation.`,
+  ];
+  return thoughts[Math.floor(Math.random() * thoughts.length)];
+}
+
+function toggleSecretThought(el) {
+  if (el.classList.contains('revealed')) {
+    el.textContent = '🔒 [HIDDEN REASONING — CLICK TO REVEAL]';
+    el.classList.remove('revealed');
+  } else {
+    el.textContent = '💭 ' + el.dataset.secret;
+    el.classList.add('revealed');
+  }
+}
+
+function addThinking(agent, idx) {
+  const arena = document.getElementById('arenaBody');
+  const el = document.createElement('div');
+  el.id = 'thinking-' + idx;
+  el.className = 'thinking-dots';
+  el.style.color = agent.colorHex || '#fff';
+  el.innerHTML = `
+    <span style="font-family:'VT323',monospace;font-size:14px;margin-right:4px">${agent.name}</span>
+    <div class="thinking-dot"></div><div class="thinking-dot"></div><div class="thinking-dot"></div>
+    <span style="margin-left:4px;opacity:0.5">PROCESSING</span>
+  `;
+  arena.appendChild(el);
+  arena.scrollTop = arena.scrollHeight;
+}
+
+function removeThinking(idx) {
+  document.getElementById('thinking-' + idx)?.remove();
+}
+
+function addMessage(name, role, text, color = 'var(--pixel-cyan)') {
+  const arena = document.getElementById('arenaBody');
+  const group = document.createElement('div');
+  group.className = 'msg-group';
+  group.innerHTML = `
+    <div class="msg-header">
+      <div class="msg-agent-dot" style="background:${color}"></div>
+      <span class="msg-agent-name" style="color:${color}">${name}</span>
+      <span class="msg-role-tag" style="color:${color}">${role}</span>
+    </div>
+    <div class="msg-bubble" style="border-color:${color}30;--bubble-color:${color}">${text}</div>
+  `;
+  arena.appendChild(group);
+  arena.scrollTop = arena.scrollHeight;
+}
+
+function showPhaseBanner(text) {
+  const arena = document.getElementById('arenaBody');
+  const el = document.createElement('div');
+  el.className = 'phase-banner';
+  el.innerHTML = `<span class="phase-icon">⚙</span> ${text}`;
+  arena.appendChild(el);
+  arena.scrollTop = arena.scrollHeight;
+}
+
+// ============================================================
+// INTERVENTION
+// ============================================================
+function sendIntervention() {
+  const agentIdx = document.getElementById('interventionAgent').value;
+  const msg = document.getElementById('interventionMsg').value.trim();
+  if (!msg) return;
+
+  const target = agentIdx === 'all' ? 'ALL AGENTS' : STATE.agents[parseInt(agentIdx)]?.name;
+  addMessage('YOU → ' + target, 'INTERVENTION', msg, 'var(--pixel-orange)');
+  document.getElementById('interventionMsg').value = '';
+  showToast('INTERVENTION SENT TO ' + target);
+}
+
+// ============================================================
+// HELPERS
+// ============================================================
+function clearArena() {
+  const arena = document.getElementById('arenaBody');
+  arena.innerHTML = `
+    <div class="arena-empty" id="arenaEmpty">
+      <div class="arena-empty-icon">⚔</div>
+      <div class="arena-empty-text">
+        CONFIGURE YOUR AGENTS<br>
+        CHOOSE AN ARCHITECTURE<br>
+        ENTER A TASK<br>
+        <span style="color:var(--pixel-green)">HIT FORGE IT</span>
+      </div>
+    </div>
+  `;
+  ['statMessages','statRounds','statTokens','statConsensus','statTime'].forEach(id => {
+    document.getElementById(id).textContent = id === 'statConsensus' ? '—' : '0';
+  });
+  setRoundDots(-1);
+  STATE.agents.forEach((_, i) => setAgentState(i, 'idle'));
+  document.getElementById('interventionRow').style.display = 'none';
+}
+
+function setRoundDots(active) {
+  for (let i = 0; i < 3; i++) {
+    const dot = document.getElementById('dot-' + i);
+    if (!dot) continue;
+    dot.classList.remove('active', 'done');
+    if (i === active) dot.classList.add('active');
+    else if (i < active) dot.classList.add('done');
+  }
+}
+
+function updateProgress(pct) {
+  document.getElementById('progressBar').style.width = pct + '%';
+}
+
+function updateStat(id, val) {
+  const el = document.getElementById(id);
+  if (el) el.textContent = val;
+}
+
+function updateSessionBadge() {
+  document.getElementById('sessionCounter').textContent = 'SESSIONS: ' + STATE.sessionCount;
+}
+
+function saveSession(task) {
+  const session = {
+    task: task.slice(0, 60),
+    arch: STATE.selectedArch,
+    agents: STATE.agents.length,
+    time: new Date().toLocaleString(),
+    messages: STATE.totalMessages,
+  };
+  STATE.history.unshift(session);
+  if (STATE.history.length > 10) STATE.history.pop();
+  localStorage.setItem('mf_history', JSON.stringify(STATE.history));
+  renderHistory();
+}
+
+function renderHistory() {
+  const container = document.getElementById('historyList');
+  if (!STATE.history.length) {
+    container.innerHTML = '<div style="font-family:\'VT323\',monospace;font-size:14px;color:var(--text-muted);padding:8px 0;">NO SESSIONS YET</div>';
+    return;
+  }
+  container.innerHTML = STATE.history.map(s => `
+    <div class="history-item" onclick="loadHistory('${escapeHtml(s.task)}')">
+      <div class="history-task">${s.task}</div>
+      <div class="history-meta">
+        <span>${s.arch}</span>
+        <span>${s.agents} agents</span>
+        <span>${s.messages} msgs</span>
+      </div>
+    </div>
+  `).join('');
+}
+
+function loadHistory(task) {
+  document.getElementById('taskInput').value = task;
+  showToast('TASK LOADED');
+}
+
+function switchView(view) {
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  event.target.classList.add('active');
+}
+
+function showToast(msg) {
+  const existing = document.querySelector('.toast');
+  if (existing) existing.remove();
+  const t = document.createElement('div');
+  t.className = 'toast';
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 2500);
+}
+
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+function escapeHtml(str) {
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// DEMO_RESPONSES and callLLM with built-in demo fallback are defined above near the API section.
+
+// ============================================================
+// BOOT
+// ============================================================
+document.addEventListener('DOMContentLoaded', () => {
+  init();
+  // Pre-load voices (Chrome loads them async)
+  if (window.speechSynthesis) {
+    window.speechSynthesis.getVoices();
+    window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices();
+  }
+});
+
+// Add demo mode banner
+setTimeout(() => {
+  const cfg = getProviderConfig();
+  if (!cfg.apiKey) {
+    showToast('DEMO MODE: NO API KEY — USING MOCK RESPONSES');
+  }
+}, 1500);
+</script>
+</body>
+</html>
